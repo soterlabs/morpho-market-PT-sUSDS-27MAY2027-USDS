@@ -2,6 +2,8 @@
 
 May-market adaptation of the November deployment baseline. `run.sh` supports local fork rehearsals and explicit mainnet deployment using an encrypted Foundry keystore. It records mined receipts, verifies each stage independently and reuses verified completed steps on rerun. Independent deployment review and vault onboarding remain separate milestones.
 
+Mainnet deployment completed on 22 November 2026. [Deployment addresses, transactions and verification record](deployments/mainnet/USDS-PT-sUSDS-27MAY2027.json). Vault onboarding has not been performed.
+
 ## Provenance
 
 Files copied from [soterlabs/morpho-market-pt-susds](https://github.com/soterlabs/morpho-market-pt-susds/tree/256bb9858cc2b42c2e1fbc556060eeacd6545f29), commit `256bb9858cc2b42c2e1fbc556060eeacd6545f29`. This is a standalone repository with fresh Git history, not a GitHub fork. Historical broadcast receipts are excluded. Audit PDFs are inherited background evidence, not certification of the May deployment or Sky clearance.
