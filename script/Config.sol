@@ -64,6 +64,19 @@ struct MarketParams {
 
 interface IMorpho {
     function createMarket(MarketParams memory marketParams) external;
+    function accrueInterest(MarketParams memory marketParams) external;
+    function position(bytes32 id, address account)
+        external
+        view
+        returns (uint256 supplyShares, uint128 borrowShares, uint128 collateral);
+    function idToMarketParams(bytes32 id) external view returns (MarketParams memory);
+    function supply(
+        MarketParams memory marketParams,
+        uint256 assets,
+        uint256 shares,
+        address onBehalf,
+        bytes calldata data
+    ) external returns (uint256 assetsSupplied, uint256 sharesSupplied);
     function market(bytes32 id)
         external
         view
@@ -97,6 +110,9 @@ contract Config is Script {
     // PT-sUSDS-27MAY2027 / USDS PRD
     uint256 constant LLTV = 0.915e18; // 91.5%
     uint256 constant BASE_DISCOUNT_PER_YEAR = 0.1e18; // 10% annual valuation discount slope
+
+    address constant DEAD = 0x000000000000000000000000000000000000dEaD;
+    uint256 constant DEAD_SUPPLY_SHARES = 1e9;
 
     uint256 constant EXPIRY = 1811376000;
     uint256 constant ALLOCATION_CEILING = 5_000_000e18; // Planned vault cap; not enforced by market creation.

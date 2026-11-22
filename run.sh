@@ -39,4 +39,6 @@ MORPHO_ORACLE=$(created_by 2_DeployMorphoOracle.s.sol "$(config_address MORPHO_C
 export MORPHO_ORACLE
 
 "${FORGE[@]}" script/3_CreateMarket.s.sol:CreateMarket
+"${FORGE[@]}" script/4_SeedMarket.s.sol:SeedMarket
+
 echo "PT_ORACLE=$PT_ORACLE  MORPHO_ORACLE=$MORPHO_ORACLE"

@@ -37,8 +37,26 @@ The existing end-to-end test runs at Ethereum block 26471676 and simulates feed 
 
 - Full Pendle graph, feed immutable and market tuple checks; negative tests and maturity scenarios.
 - Restart-safe deployment scripts with receipt reconciliation and immutable configuration snapshots.
-- Dead-supply initialization and supply/borrow/repay smoke tests.
+- Broader supply/borrow/repay smoke tests and deployment receipt reconciliation for all steps.
 - Deployment manifest schema and independent read-only Dewiz verification procedure.
 - Optional vault-cap calldata after policy and authority confirmation.
 
 Mainnet deployment, security clearance, review approval and vault onboarding are separate milestones. No deployment addresses or approvals have been recorded for this new Morpho market.
+
+## Dead deposit: step 4
+
+`run.sh` now includes `script/4_SeedMarket.s.sol:SeedMarket` immediately after market creation. The overall runner remains disabled pending completion of the deployment workflow above.
+
+This step supplies USDS on behalf of `0x000000000000000000000000000000000000dEaD` until that position has at least `1e9` supply shares, following [Morpho market dead-deposit guidance](https://docs.morpho.org/curate/tutorials-market-v1/dead-deposit/). These shares are permanently inaccessible. This is separate from Pendle LP liquidity and creates no borrow position.
+
+The script verifies the May token graph and market parameters, accrues interest, reads the existing dead position and market totals, then calculates the missing shares' USDS cost with upward rounding and Morpho's virtual assets/shares. It approves only the calculated assets, supplies by exact shares, clears the approval and checks the resulting position. If already seeded, it sends no seed transactions; partial positions receive only the missing shares.
+
+`SEED_MAX_ASSETS` is an optional spending ceiling in USDS base units, defaulting to `1000` (0.000000000000001 USDS). A fresh market needs exactly 1000 base units to mint `1e9` shares. A populated market may need more; the script rejects an amount above the ceiling. The deployer must hold the required USDS as well as ETH for gas. An approval-bounded supply can revert if the share price increases between simulation and mining; inspect receipts and rerun this seed step against confirmed state, rather than rerunning all deployments.
+
+Once the market has been deployed and verified, the seed step can also be run separately:
+
+```sh
+MORPHO_ORACLE=<verified-may-market-oracle> forge script script/4_SeedMarket.s.sol:SeedMarket --rpc-url "$ETH_RPC_URL" --account pendle-may2027-deployer --broadcast
+```
+
+The seed tests cover a fresh deposit, repeated execution, partial top-up, asset-limit rejection, a populated market with accrued borrow interest and upward rounding, an uncreated market and a wrong loan token. These are fork tests, not tests of shell orchestration or live transaction sequencing.
