@@ -4,6 +4,14 @@ May-market adaptation of the November deployment baseline. `run.sh` supports loc
 
 Mainnet deployment completed on 22 November 2026. [Deployment addresses, transactions and verification record](deployments/mainnet/USDS-PT-sUSDS-27MAY2027.json). Vault onboarding has not been performed.
 
+## Mainnet deployment
+
+| Component | Address / ID |
+|---|---|
+| PT oracle | [0x7be685487c84ce59380190cbd7fc1a322e168b68](https://etherscan.io/address/0x7be685487c84ce59380190cbd7fc1a322e168b68) |
+| Morpho oracle | [0x9b41af43adbebf0370b0c0c9b157d5bc80432e84](https://etherscan.io/address/0x9b41af43adbebf0370b0c0c9b157d5bc80432e84) |
+| Market ID | `0x1cc8ed31fe833b929e4ece4061a0a5378cef5269bbd4310ce7a7b13874b9b87f` |
+
 ## Provenance
 
 Files copied from [soterlabs/morpho-market-pt-susds](https://github.com/soterlabs/morpho-market-pt-susds/tree/256bb9858cc2b42c2e1fbc556060eeacd6545f29), commit `256bb9858cc2b42c2e1fbc556060eeacd6545f29`. This is a standalone repository with fresh Git history, not a GitHub fork. Historical broadcast receipts are excluded. Audit PDFs are inherited background evidence, not certification of the May deployment or Sky clearance.
