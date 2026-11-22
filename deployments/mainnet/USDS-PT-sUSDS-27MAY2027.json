@@ -425,8 +425,6 @@
     "usdsBaseUnits": 868685795021378000
   },
   "allocationCeilingStatus": "planned, not enforced",
-  "deWizReview": "pending",
-  "skyClearance": "pending",
   "vaultOnboarding": "not performed",
   "preflightBlock": {
     "number": "0x193f4fa",

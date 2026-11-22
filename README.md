@@ -14,7 +14,7 @@ Mainnet deployment completed on 22 November 2026. [Deployment addresses, transac
 
 ## Provenance
 
-Files copied from [soterlabs/morpho-market-pt-susds](https://github.com/soterlabs/morpho-market-pt-susds/tree/256bb9858cc2b42c2e1fbc556060eeacd6545f29), commit `256bb9858cc2b42c2e1fbc556060eeacd6545f29`. This is a standalone repository with fresh Git history, not a GitHub fork. Historical broadcast receipts are excluded. Audit PDFs are inherited background evidence, not certification of the May deployment or Sky clearance.
+Files copied from [soterlabs/morpho-market-pt-susds](https://github.com/soterlabs/morpho-market-pt-susds/tree/256bb9858cc2b42c2e1fbc556060eeacd6545f29), commit `256bb9858cc2b42c2e1fbc556060eeacd6545f29`. This is a standalone repository with fresh Git history, not a GitHub fork. Historical broadcast receipts are excluded. Audit PDFs provide evidence within their documented scopes; they do not certify this deployment.
 
 ## Configuration
 
@@ -25,6 +25,6 @@ Files copied from [soterlabs/morpho-market-pt-susds](https://github.com/soterlab
 - Oracle: PT linear feed only, wrapped for Morpho with 18-decimal collateral and loan assets. No USD feeds or ERC-4626 conversion.
 - Allocation ceiling: 5,000,000 USDS, planned and not enforced. It is a future vault cap, not a market-wide cap.
 
-Authoritative addresses are in `script/Config.sol`. The LP, PT, SY and YT must match the May deployment; the preflight checks their cross-links and LP/PT/YT expiry.
+Authoritative addresses are in `script/Config.sol`. The LP, PT, SY and YT must match the Pendle market maturing on 27 May 2027; the preflight checks their cross-links and LP/PT/YT expiry.
 
 `0x34C91651A070664279866E5f3d6B4d5F65cbbFFb` is the shared PendleSparkLinearDiscountOracleFactory, not a PT token or a November-specific feed. `createWithMarket(PENDLE_MARKET, BASE_DISCOUNT_PER_YEAR)` creates the new market-specific oracle. The receipt verifier reads this factory address from Config.sol to locate its exact creation event; it also reads the shared Morpho wrapper factory there. USDS, Morpho Blue, AdaptiveCurveIRM and both factories remain the PRD's shared mainnet infrastructure. No old PT oracle is reused.

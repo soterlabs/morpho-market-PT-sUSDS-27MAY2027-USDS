@@ -106,7 +106,7 @@ def preflight():
         data = load()
     else:
         require(balances['usdsBaseUnits'] >= 1000, 'Deployer has insufficient USDS for fresh seed')
-        data = {'chainId': 1, 'marketLabel': 'USDS / PT-sUSDS-27MAY2027', 'simulationOnly': os.environ.get('LOCAL_FORK') == '1', 'deployer': DEPLOYER, 'configHash': hashlib.sha256(CONFIG.read_bytes()).hexdigest(), 'sourceCommit': cast_git_head(), 'addresses': a, 'parameters': NUMBERS, 'steps': {}, 'initialBalances': balances, 'allocationCeilingStatus': 'planned, not enforced', 'deWizReview': 'pending', 'skyClearance': 'pending', 'vaultOnboarding': 'not performed'}
+        data = {'chainId': 1, 'marketLabel': 'USDS / PT-sUSDS-27MAY2027', 'simulationOnly': os.environ.get('LOCAL_FORK') == '1', 'deployer': DEPLOYER, 'configHash': hashlib.sha256(CONFIG.read_bytes()).hexdigest(), 'sourceCommit': cast_git_head(), 'addresses': a, 'parameters': NUMBERS, 'steps': {}, 'initialBalances': balances, 'allocationCeilingStatus': 'planned, not enforced', 'vaultOnboarding': 'not performed'}
     data['preflightBlock'] = {k: block[k] for k in ['number', 'hash', 'timestamp']}
     save(data)
     print('Preflight passed at block', int(tag, 16), '; balances:', json.dumps(balances))
