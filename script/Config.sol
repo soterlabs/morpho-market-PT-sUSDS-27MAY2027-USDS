@@ -1,14 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Script, console} from "forge-std/Script.sol";
+import {Script} from "forge-std/Script.sol";
 
 interface IPendleMarket {
+    function expiry() external view returns (uint256);
     function readTokens() external view returns (address sy, address pt, address yt);
 }
 
 interface IPrincipalToken {
     function expiry() external view returns (uint256);
+    function SY() external view returns (address);
+    function YT() external view returns (address);
+}
+
+interface IYieldToken {
+    function expiry() external view returns (uint256);
+    function SY() external view returns (address);
+    function PT() external view returns (address);
 }
 
 // Pendle PendleSparkLinearDiscountOracleFactory
@@ -70,9 +79,13 @@ interface IMorpho {
 
 /// Shared mainnet addresses and PRD market parameters for the deploy scripts.
 contract Config is Script {
-    // Pendle (mainnet, from pendle-core-v2-public deployments/1-core.json)
+    // May 27, 2027 Pendle deployment from the PRD; verified against Ethereum.
     address constant PENDLE_MARKET = 0x50D24456eD009A1461A159A2B4dcD12aDfE6A60b; // PT-sUSDS-27MAY2027 market
     address constant PT_SUSDS = 0x49080d5e26227B5c98e0662A7498A9Dd60c56b06;
+    address constant SY_SUSDS = 0x5E4CEcc6676Ef448f20822D2449bC1bdE1432Eb4;
+    address constant YT_SUSDS = 0xC2de924D686Ff2D69a14c85aECB81A33240B7e23;
+
+    // Shared infrastructure: factory address does not change with PT maturity.
     address constant SPARK_LINEAR_DISCOUNT_ORACLE_FACTORY = 0x34C91651A070664279866E5f3d6B4d5F65cbbFFb;
 
     // Morpho (mainnet)
@@ -87,6 +100,21 @@ contract Config is Script {
 
     uint256 constant EXPIRY = 1811376000;
     uint256 constant ALLOCATION_CEILING = 5_000_000e18; // Planned vault cap; not enforced by market creation.
+
+    function checkPendleDeployment() public view {
+        require(block.chainid == 1, "expected Ethereum mainnet");
+        (address sy, address pt, address yt) = IPendleMarket(PENDLE_MARKET).readTokens();
+        require(pt == PT_SUSDS, "unexpected PT token");
+        require(sy == SY_SUSDS, "unexpected SY token");
+        require(yt == YT_SUSDS, "unexpected YT token");
+        require(IPendleMarket(PENDLE_MARKET).expiry() == EXPIRY, "unexpected LP expiry");
+        require(IPrincipalToken(PT_SUSDS).expiry() == EXPIRY, "unexpected PT expiry");
+        require(IYieldToken(YT_SUSDS).expiry() == EXPIRY, "unexpected YT expiry");
+        require(IPrincipalToken(PT_SUSDS).SY() == SY_SUSDS, "unexpected PT.SY");
+        require(IPrincipalToken(PT_SUSDS).YT() == YT_SUSDS, "unexpected PT.YT");
+        require(IYieldToken(YT_SUSDS).PT() == PT_SUSDS, "unexpected YT.PT");
+        require(IYieldToken(YT_SUSDS).SY() == SY_SUSDS, "unexpected YT.SY");
+    }
 
     function marketParams(address oracle) public pure returns (MarketParams memory) {
         return

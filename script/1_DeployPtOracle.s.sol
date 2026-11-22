@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {console} from "forge-std/Script.sol";
-import {Config, IPendleMarket, IPrincipalToken, ISparkLinearDiscountOracleFactory, IAggregatorV3} from "./Config.sol";
+import {Config, IPrincipalToken, ISparkLinearDiscountOracleFactory, IAggregatorV3} from "./Config.sol";
 
 /// Step 1: deploy the linear-discount PT-sUSDS/USDS oracle via Pendle's factory, then check it.
 contract DeployPtOracle is Config {
@@ -18,10 +18,7 @@ contract DeployPtOracle is Config {
     }
 
     function execute() public returns (address) {
-        require(block.chainid == 1, "expected Ethereum mainnet");
-        require(IPrincipalToken(PT_SUSDS).expiry() == EXPIRY, "unexpected PT expiry");
-        (, address pt,) = IPendleMarket(PENDLE_MARKET).readTokens();
-        require(pt == PT_SUSDS, "unexpected PT token");
+        checkPendleDeployment();
         return ISparkLinearDiscountOracleFactory(SPARK_LINEAR_DISCOUNT_ORACLE_FACTORY)
             .createWithMarket(PENDLE_MARKET, BASE_DISCOUNT_PER_YEAR);
     }

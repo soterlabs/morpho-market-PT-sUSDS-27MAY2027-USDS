@@ -11,6 +11,18 @@ exit 1
 FORGE=(forge script --rpc-url "$RPC" --account "$ACCOUNT" --broadcast)
 CHAIN=$(cast chain-id --rpc-url "$RPC")
 
+# Read shared factory addresses from Config.sol so the runner cannot drift.
+config_address() {
+    python3 - "$1" <<'PYCONFIG'
+import pathlib, re, sys
+source = (pathlib.Path("script") / "Config.sol").read_text()
+values = re.findall(r"address constant " + re.escape(sys.argv[1]) + r"\s*=\s*(0x[0-9a-fA-F]{40});", source)
+if len(values) != 1:
+    raise SystemExit("Expected exactly one configured address for " + sys.argv[1])
+print(values[0])
+PYCONFIG
+}
+
 # address the given factory created in <script>'s mined tx (trailing 20 bytes of its event data)
 created_by() {
     python3 -c "import json,sys; d=json.load(open(sys.argv[1])); \
@@ -19,11 +31,11 @@ print(next('0x'+l['data'][-40:] for r in d['receipts'] for l in r['logs'] if l['
 }
 
 "${FORGE[@]}" script/1_DeployPtOracle.s.sol:DeployPtOracle
-PT_ORACLE=$(created_by 1_DeployPtOracle.s.sol 0x34C91651A070664279866E5f3d6B4d5F65cbbFFb) # bare assign so set -e fires on failure
+PT_ORACLE=$(created_by 1_DeployPtOracle.s.sol "$(config_address SPARK_LINEAR_DISCOUNT_ORACLE_FACTORY)") # bare assign so set -e fires on failure
 export PT_ORACLE
 
 "${FORGE[@]}" script/2_DeployMorphoOracle.s.sol:DeployMorphoOracle
-MORPHO_ORACLE=$(created_by 2_DeployMorphoOracle.s.sol 0x3A7bB36Ee3f3eE32A60e9f2b33c1e5f2E83ad766)
+MORPHO_ORACLE=$(created_by 2_DeployMorphoOracle.s.sol "$(config_address MORPHO_CHAINLINK_ORACLE_V2_FACTORY)")
 export MORPHO_ORACLE
 
 "${FORGE[@]}" script/3_CreateMarket.s.sol:CreateMarket

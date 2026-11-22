@@ -15,7 +15,9 @@ Files copied from [soterlabs/morpho-market-pt-susds](https://github.com/soterlab
 - Oracle: PT linear feed only, wrapped for Morpho with 18-decimal collateral and loan assets. No USD feeds or ERC-4626 conversion.
 - Allocation ceiling: 5,000,000 USDS, planned and not enforced. It is a future vault cap, not a market-wide cap.
 
-Authoritative addresses are in `script/Config.sol`.
+Authoritative addresses are in `script/Config.sol`. The LP, PT, SY and YT must match the May deployment; the preflight checks their cross-links and LP/PT/YT expiry.
+
+`0x34C91651A070664279866E5f3d6B4d5F65cbbFFb` is the shared PendleSparkLinearDiscountOracleFactory, not a PT token or a November-specific feed. `createWithMarket(PENDLE_MARKET, BASE_DISCOUNT_PER_YEAR)` creates the new market-specific oracle. The runner reads this factory address from Config.sol to locate its receipt log; it also reads the shared Morpho wrapper factory there. USDS, Morpho Blue, AdaptiveCurveIRM and both factories remain the PRD's shared mainnet infrastructure. No old PT oracle is reused.
 
 ## Local verification
 
