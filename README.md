@@ -1,6 +1,6 @@
 # USDS / PT-sUSDS-27MAY2027
 
-Initial May-market adaptation of the November deployment baseline. This repository is not deployment-ready: the full PRD workflow remains to be implemented and reviewed. `run.sh` is disabled until then.
+Initial May-market adaptation of the November deployment baseline. This repository is not deployment-ready: the full PRD workflow remains to be implemented and reviewed. `run.sh` permits loopback Anvil fork rehearsals only; production broadcasts remain disabled.
 
 ## Provenance
 
@@ -45,7 +45,7 @@ Mainnet deployment, security clearance, review approval and vault onboarding are
 
 ## Dead deposit: step 4
 
-`run.sh` now includes `script/4_SeedMarket.s.sol:SeedMarket` immediately after market creation. The overall runner remains disabled pending completion of the deployment workflow above.
+`run.sh` now includes `script/4_SeedMarket.s.sol:SeedMarket` immediately after market creation. Production execution remains disabled pending completion of the deployment workflow above; fork rehearsals include all four steps.
 
 This step supplies USDS on behalf of `0x000000000000000000000000000000000000dEaD` until that position has at least `1e9` supply shares, following [Morpho market dead-deposit guidance](https://docs.morpho.org/curate/tutorials-market-v1/dead-deposit/). These shares are permanently inaccessible. This is separate from Pendle LP liquidity and creates no borrow position.
 
@@ -60,3 +60,25 @@ MORPHO_ORACLE=<verified-may-market-oracle> forge script script/4_SeedMarket.s.so
 ```
 
 The seed tests cover a fresh deposit, repeated execution, partial top-up, asset-limit rejection, a populated market with accrued borrow interest and upward rounding, an uncreated market and a wrong loan token. These are fork tests, not tests of shell orchestration or live transaction sequencing.
+
+## Full runner rehearsal on a current Ethereum fork
+
+The shell runner supports `LOCAL_FORK=1` only. It verifies a loopback HTTP endpoint, Anvil fork metadata and chain ID 1 before submitting transactions. No private key is needed: impersonate the intended deployer on the local Anvil node. The deployer's actual forked ETH and USDS balances must cover the deployment; the runner does not fund it.
+
+Start Anvil using an Ethereum RPC, retaining chain ID 1, and use a separate terminal for the runner:
+
+```sh
+anvil --fork-url "$ETH_RPC_URL" --chain-id 1 --host 127.0.0.1 --port 18545 --silent
+```
+
+```sh
+export DEPLOYER=<deployer-address>
+cast rpc --rpc-url http://127.0.0.1:18545 anvil_impersonateAccount "$DEPLOYER"
+LOCAL_FORK=1 RPC=http://127.0.0.1:18545 ./run.sh
+```
+
+Fork receipts go to a newly created `/tmp/pendle-may2027-broadcast.*` directory, or the explicit `FORK_ARTIFACT_DIR`, keeping simulated chain-1 receipts separate from production artifacts. Start a clean fork for a new full rehearsal; the full runner does not yet resume partial deployments. The seed step independently supports retries.
+
+The runner uses sequential mining and a 300% gas-estimate multiplier. A full rehearsal exposed an out-of-gas revert in interest accrual with Foundry's default multiplier: a later mined block executes more work than same-block simulation. Unused gas allowance is not charged.
+
+Validated against Ethereum block 26473666 (2026-11-22 22:31:59 UTC): all four steps completed in seven local transactions with the requested deployer's unmodified balances. Independent reads checked both oracle configurations, exact prices, full market parameters and the dead position. Repeating seeding produced no transactions. This is local fork evidence, not a mainnet deployment or completion of the remaining PRD review workflow.
