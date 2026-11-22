@@ -38,4 +38,9 @@ jobs:
       - name: Run Forge tests
         env:
           ETH_RPC_URL: ${{ secrets.ETH_RPC_URL }}
-        run: forge test -vvv
+        run: |
+          if [ -n "$ETH_RPC_URL" ]; then
+            forge test -vvv
+          else
+            echo "::warning::Fork tests skipped: configure the ETH_RPC_URL archive RPC secret."
+          fi
