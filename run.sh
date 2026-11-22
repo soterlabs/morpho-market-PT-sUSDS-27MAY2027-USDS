@@ -4,12 +4,8 @@
 # real deployed address from its mined event and thread it into the next step.
 #   LOCAL_FORK=1 RPC=http://127.0.0.1:18545 DEPLOYER=<impersonated-address> ./run.sh
 set -euo pipefail
-# Only a loopback Anvil fork is enabled while production receipt/restart work is pending.
-if [[ "${LOCAL_FORK:-0}" != "1" ]]; then
-    echo "Production deployment remains disabled. Set LOCAL_FORK=1 for a local Anvil fork rehearsal." >&2
-    exit 1
-fi
 : "${RPC:?}" "${DEPLOYER:?}"
+if [[ "${LOCAL_FORK:-0}" == "1" ]]; then
 python3 - "$RPC" <<'PYFORK'
 import json, sys, urllib.parse, urllib.request
 url = urllib.parse.urlparse(sys.argv[1])
@@ -25,42 +21,61 @@ if rpc("eth_chainId") != "0x1":
     raise SystemExit("Expected Ethereum chain ID 1")
 print("Local fork source block:", info["forkConfig"]["forkBlockNumber"])
 PYFORK
-export FOUNDRY_BROADCAST="${FORK_ARTIFACT_DIR:-$(mktemp -d /tmp/pendle-may2027-broadcast.XXXXXX)}"
+    export DEPLOYMENT_DIR="${FORK_ARTIFACT_DIR:-$(mktemp -d /tmp/pendle-may2027-broadcast.XXXXXX)}"
+    if [[ -n "${ACCOUNT:-}" ]]; then
+        : "${PASSWORD_FILE:?}"
+        signer=$(cast wallet address --account "$ACCOUNT" --password-file "$PASSWORD_FILE")
+        [[ "${signer,,}" == "${DEPLOYER,,}" ]] || exit 1
+        FORGE=(forge script --rpc-url "$RPC" --sender "$DEPLOYER" --account "$ACCOUNT" --password-file "$PASSWORD_FILE")
+    else
+        FORGE=(forge script --rpc-url "$RPC" --sender "$DEPLOYER" --unlocked)
+    fi
+else
+    : "${MAINNET:?Set MAINNET=1 for production}" "${ACCOUNT:?}" "${PASSWORD_FILE:?}"
+    [[ "$MAINNET" == "1" ]] || exit 1
+    signer=$(cast wallet address --account "$ACCOUNT" --password-file "$PASSWORD_FILE")
+    [[ "${signer,,}" == "${DEPLOYER,,}" ]] || { echo "Keystore/deployer mismatch" >&2; exit 1; }
+    export DEPLOYMENT_DIR="deployments/mainnet"
+    FORGE=(forge script --rpc-url "$RPC" --sender "$DEPLOYER" --account "$ACCOUNT" --password-file "$PASSWORD_FILE")
+fi
+export FOUNDRY_BROADCAST="$DEPLOYMENT_DIR/broadcast"
 mkdir -p "$FOUNDRY_BROADCAST"
-echo "Local-only broadcast receipts: $FOUNDRY_BROADCAST"
-# Interest accrual can cost more in a later mined block than in same-block simulation.
-# Gas limit headroom is not gas spent: unused gas is not charged.
-FORGE=(forge script --rpc-url "$RPC" --sender "$DEPLOYER" --unlocked --broadcast --slow --gas-estimate-multiplier 300)
-CHAIN=$(cast chain-id --rpc-url "$RPC")
+# Later mined blocks can execute additional interest-accrual work.
+FORGE+=(--broadcast --slow --gas-estimate-multiplier 300)
+STATE=(python3 script/deployment_state.py)
+"${STATE[@]}" preflight
 
-# Read shared factory addresses from Config.sol so the runner cannot drift.
-config_address() {
-    python3 - "$1" <<'PYCONFIG'
-import pathlib, re, sys
-source = (pathlib.Path("script") / "Config.sol").read_text()
-values = re.findall(r"address constant " + re.escape(sys.argv[1]) + r"\s*=\s*(0x[0-9a-fA-F]{40});", source)
-if len(values) != 1:
-    raise SystemExit("Expected exactly one configured address for " + sys.argv[1])
-print(values[0])
-PYCONFIG
+run_step() {
+    local file="$1" contract="$2" stage="$3"
+    local receipt="$FOUNDRY_BROADCAST/$file/1/run-latest.json"
+    local intent="$DEPLOYMENT_DIR/$file.intent"
+    if [[ -f "$receipt" ]]; then
+        "${STATE[@]}" recover "$file"
+        "${STATE[@]}" verify "$stage"
+        echo "Reused verified completed step: $file"
+        return
+    fi
+    if [[ -f "$intent" ]]; then
+        echo "Unresolved prior attempt for $file: reconcile its nonce and receipts before retrying." >&2
+        exit 1
+    fi
+    cast nonce "$DEPLOYER" --rpc-url "$RPC" > "$intent"
+    if ! "${FORGE[@]}" "script/$file:$contract"; then
+        # Record any mined state before stopping. Never automatically redeploy.
+        if [[ -f "$receipt" ]]; then "${STATE[@]}" recover "$file" || true; fi
+        echo "Step stopped; mined transactions cannot be undone. Reconcile saved receipts." >&2
+        exit 1
+    fi
+    if [[ -f "$receipt" ]]; then "${STATE[@]}" recover "$file"; fi
+    "${STATE[@]}" verify "$stage"
 }
-
-# address the given factory created in <script>'s mined tx (trailing 20 bytes of its event data)
-created_by() {
-    python3 -c "import json,sys; d=json.load(open(sys.argv[1])); \
-print(next('0x'+l['data'][-40:] for r in d['receipts'] for l in r['logs'] if l['address'].lower()==sys.argv[2].lower()))" \
-        "$FOUNDRY_BROADCAST/$1/$CHAIN/run-latest.json" "$2"
-}
-
-"${FORGE[@]}" script/1_DeployPtOracle.s.sol:DeployPtOracle
-PT_ORACLE=$(created_by 1_DeployPtOracle.s.sol "$(config_address SPARK_LINEAR_DISCOUNT_ORACLE_FACTORY)") # bare assign so set -e fires on failure
+run_step 1_DeployPtOracle.s.sol DeployPtOracle 1
+PT_ORACLE=$("${STATE[@]}" get ptOracle)
 export PT_ORACLE
-
-"${FORGE[@]}" script/2_DeployMorphoOracle.s.sol:DeployMorphoOracle
-MORPHO_ORACLE=$(created_by 2_DeployMorphoOracle.s.sol "$(config_address MORPHO_CHAINLINK_ORACLE_V2_FACTORY)")
+run_step 2_DeployMorphoOracle.s.sol DeployMorphoOracle 2
+MORPHO_ORACLE=$("${STATE[@]}" get morphoOracle)
 export MORPHO_ORACLE
-
-"${FORGE[@]}" script/3_CreateMarket.s.sol:CreateMarket
-"${FORGE[@]}" script/4_SeedMarket.s.sol:SeedMarket
-
-echo "PT_ORACLE=$PT_ORACLE  MORPHO_ORACLE=$MORPHO_ORACLE"
+run_step 3_CreateMarket.s.sol CreateMarket 3
+run_step 4_SeedMarket.s.sol SeedMarket 4
+echo "PT_ORACLE=$PT_ORACLE MORPHO_ORACLE=$MORPHO_ORACLE"
+echo "Manifest: $DEPLOYMENT_DIR/USDS-PT-sUSDS-27MAY2027.json"

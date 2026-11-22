@@ -1,6 +1,6 @@
 # USDS / PT-sUSDS-27MAY2027
 
-Initial May-market adaptation of the November deployment baseline. This repository is not deployment-ready: the full PRD workflow remains to be implemented and reviewed. `run.sh` permits loopback Anvil fork rehearsals only; production broadcasts remain disabled.
+May-market adaptation of the November deployment baseline. `run.sh` supports local fork rehearsals and explicit mainnet deployment using an encrypted Foundry keystore. It records mined receipts, verifies each stage independently and reuses verified completed steps on rerun. Independent deployment review and vault onboarding remain separate milestones.
 
 ## Provenance
 
@@ -17,4 +17,4 @@ Files copied from [soterlabs/morpho-market-pt-susds](https://github.com/soterlab
 
 Authoritative addresses are in `script/Config.sol`. The LP, PT, SY and YT must match the May deployment; the preflight checks their cross-links and LP/PT/YT expiry.
 
-`0x34C91651A070664279866E5f3d6B4d5F65cbbFFb` is the shared PendleSparkLinearDiscountOracleFactory, not a PT token or a November-specific feed. `createWithMarket(PENDLE_MARKET, BASE_DISCOUNT_PER_YEAR)` creates the new market-specific oracle. The runner reads this factory address from Config.sol to locate its receipt log; it also reads the shared Morpho wrapper factory there. USDS, Morpho Blue, AdaptiveCurveIRM and both factories remain the PRD's shared mainnet infrastructure. No old PT oracle is reused.
+`0x34C91651A070664279866E5f3d6B4d5F65cbbFFb` is the shared PendleSparkLinearDiscountOracleFactory, not a PT token or a November-specific feed. `createWithMarket(PENDLE_MARKET, BASE_DISCOUNT_PER_YEAR)` creates the new market-specific oracle. The receipt verifier reads this factory address from Config.sol to locate its exact creation event; it also reads the shared Morpho wrapper factory there. USDS, Morpho Blue, AdaptiveCurveIRM and both factories remain the PRD's shared mainnet infrastructure. No old PT oracle is reused.
